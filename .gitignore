@@ -1,0 +1,19 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build files
+bin/
+obj/
+
+# Logs
+Logs/
+*.log
+
+# Environment secrets
+.env
+.env.*
+appsettings.Development.json
+appsettings.Production.json
+appsettings.json
