@@ -9,7 +9,7 @@ DELIMITER $$
 -- ── AUTH ────────────────────────────────────────────────────────────────────
 
 DROP PROCEDURE IF EXISTS sp_Auth_Login$$
-CREATE PROCEDURE sp_Auth_Login(IN p_Username VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Auth_Login(IN p_Username VARCHAR(100))
 BEGIN
     SELECT Id, Username, Name, PasswordHash, Role, IsActive 
     FROM Users 
@@ -27,8 +27,8 @@ END$$
 DROP PROCEDURE IF EXISTS sp_Auth_CreateRefreshToken$$
 CREATE PROCEDURE sp_Auth_CreateRefreshToken(
     IN p_UserId INT,
-    IN p_TokenHash VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_IpAddress VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_TokenHash VARCHAR(500),
+    IN p_IpAddress VARCHAR(50),
     IN p_SlidingExpiry DATETIME,
     IN p_AbsoluteExpiry DATETIME
 )
@@ -38,7 +38,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Auth_ValidateRefreshToken$$
-CREATE PROCEDURE sp_Auth_ValidateRefreshToken(IN p_TokenHash VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Auth_ValidateRefreshToken(IN p_TokenHash VARCHAR(500))
 BEGIN
     SELECT Id, UserId, IsRevoked, SlidingExpiry, AbsoluteExpiry 
     FROM RefreshTokens 
@@ -48,8 +48,8 @@ END$$
 DROP PROCEDURE IF EXISTS sp_Auth_RotateRefreshToken$$
 CREATE PROCEDURE sp_Auth_RotateRefreshToken(
     IN p_OldId INT,
-    IN p_OldHash VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_NewHash VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_OldHash VARCHAR(500),
+    IN p_NewHash VARCHAR(500),
     IN p_NewSlidingExpiry DATETIME,
     IN p_NewAbsoluteExpiry DATETIME
 )
@@ -68,7 +68,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Auth_RevokeToken$$
-CREATE PROCEDURE sp_Auth_RevokeToken(IN p_TokenHash VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_Reason VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Auth_RevokeToken(IN p_TokenHash VARCHAR(500), IN p_Reason VARCHAR(50))
 BEGIN
     UPDATE RefreshTokens 
     SET IsRevoked = 1, RevokedAt = NOW(), RevokedReason = p_Reason 
@@ -82,7 +82,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Auth_ChangePassword$$
-CREATE PROCEDURE sp_Auth_ChangePassword(IN p_UserId INT, IN p_NewPasswordHash VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Auth_ChangePassword(IN p_UserId INT, IN p_NewPasswordHash VARCHAR(500))
 BEGIN
     UPDATE Users SET PasswordHash = p_NewPasswordHash, UpdatedAt = NOW() WHERE Id = p_UserId;
 END$$
@@ -116,7 +116,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Rooms_GetBySlug$$
-CREATE PROCEDURE sp_Rooms_GetBySlug(IN p_Slug VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Rooms_GetBySlug(IN p_Slug VARCHAR(100))
 BEGIN
     DECLARE v_RoomId INT;
 
@@ -320,13 +320,13 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Rooms_Create$$
 CREATE PROCEDURE sp_Rooms_Create(
-    IN p_Slug VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_NameEn VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_NameTa VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ShortDescEn VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ShortDescTa VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_DescriptionEn TEXT COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_DescriptionTa TEXT COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Slug VARCHAR(100),
+    IN p_NameEn VARCHAR(200),
+    IN p_NameTa VARCHAR(200),
+    IN p_ShortDescEn VARCHAR(500),
+    IN p_ShortDescTa VARCHAR(500),
+    IN p_DescriptionEn TEXT,
+    IN p_DescriptionTa TEXT,
     IN p_IsAc TINYINT(1),
     IN p_MaxOccupancy INT,
     IN p_StartingPrice DECIMAL(10,2),
@@ -351,14 +351,14 @@ BEGIN
     IF p_RoomNumbersJson IS NOT NULL AND JSON_VALID(p_RoomNumbersJson) AND JSON_LENGTH(p_RoomNumbersJson) > 0 THEN
         INSERT IGNORE INTO RoomUnits (RoomId, RoomNumber, Floor, IsActive)
         SELECT v_RoomId, 
-               CAST(jt.RoomNumber AS CHAR(50)) COLLATE utf8mb4_uca1400_ai_ci,
+               CAST(jt.RoomNumber AS CHAR(50)),
                CASE 
                    WHEN jt.RoomNumber LIKE '1%' THEN '1st Floor'
                    WHEN jt.RoomNumber LIKE '2%' THEN '2nd Floor'
                    WHEN jt.RoomNumber LIKE '3%' THEN '3rd Floor'
                    ELSE 'Ground Floor'
                END, 1
-        FROM JSON_TABLE(p_RoomNumbersJson, '$[*]' COLUMNS (RoomNumber VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci PATH '$')) AS jt
+        FROM JSON_TABLE(p_RoomNumbersJson, '$[*]' COLUMNS (RoomNumber VARCHAR(50) CHARACTER SET utf8mb4 PATH '$')) AS jt
         WHERE jt.RoomNumber IS NOT NULL AND TRIM(jt.RoomNumber) != '';
 
         SELECT COUNT(*) INTO v_UnitsCount FROM RoomUnits WHERE RoomId = v_RoomId;
@@ -373,13 +373,13 @@ END$$
 DROP PROCEDURE IF EXISTS sp_Rooms_Update$$
 CREATE PROCEDURE sp_Rooms_Update(
     IN p_Id INT,
-    IN p_Slug VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_NameEn VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_NameTa VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ShortDescEn VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ShortDescTa VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_DescriptionEn TEXT COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_DescriptionTa TEXT COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Slug VARCHAR(100),
+    IN p_NameEn VARCHAR(200),
+    IN p_NameTa VARCHAR(200),
+    IN p_ShortDescEn VARCHAR(500),
+    IN p_ShortDescTa VARCHAR(500),
+    IN p_DescriptionEn TEXT,
+    IN p_DescriptionTa TEXT,
     IN p_IsAc TINYINT(1),
     IN p_MaxOccupancy INT,
     IN p_StartingPrice DECIMAL(10,2),
@@ -406,21 +406,21 @@ BEGIN
         DELETE FROM RoomUnits 
         WHERE RoomId = p_Id 
           AND RoomNumber NOT IN (
-              SELECT CAST(jt.RoomNumber AS CHAR(50)) COLLATE utf8mb4_uca1400_ai_ci
-              FROM JSON_TABLE(p_RoomNumbersJson, '$[*]' COLUMNS (RoomNumber VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci PATH '$')) AS jt
+              SELECT CAST(jt.RoomNumber AS CHAR(50))
+              FROM JSON_TABLE(p_RoomNumbersJson, '$[*]' COLUMNS (RoomNumber VARCHAR(50) CHARACTER SET utf8mb4 PATH '$')) AS jt
           );
 
         -- Insert newly added units
         INSERT IGNORE INTO RoomUnits (RoomId, RoomNumber, Floor, IsActive)
         SELECT p_Id, 
-               CAST(jt.RoomNumber AS CHAR(50)) COLLATE utf8mb4_uca1400_ai_ci,
+               CAST(jt.RoomNumber AS CHAR(50)),
                CASE 
                    WHEN jt.RoomNumber LIKE '1%' THEN '1st Floor'
                    WHEN jt.RoomNumber LIKE '2%' THEN '2nd Floor'
                    WHEN jt.RoomNumber LIKE '3%' THEN '3rd Floor'
                    ELSE 'Ground Floor'
                END, 1
-        FROM JSON_TABLE(p_RoomNumbersJson, '$[*]' COLUMNS (RoomNumber VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci PATH '$')) AS jt
+        FROM JSON_TABLE(p_RoomNumbersJson, '$[*]' COLUMNS (RoomNumber VARCHAR(50) CHARACTER SET utf8mb4 PATH '$')) AS jt
         WHERE jt.RoomNumber IS NOT NULL AND TRIM(jt.RoomNumber) != '';
 
         -- Sync TotalUnits count with actual RoomUnits count
@@ -448,7 +448,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_RoomImages_Add$$
-CREATE PROCEDURE sp_RoomImages_Add(IN p_RoomId INT, IN p_Url VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_AltEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_AltTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_RoomImages_Add(IN p_RoomId INT, IN p_Url VARCHAR(500), IN p_AltEn VARCHAR(300), IN p_AltTa VARCHAR(300))
 BEGIN
     INSERT INTO RoomImages (RoomId, Url, AltEn, AltTa) VALUES (p_RoomId, p_Url, p_AltEn, p_AltTa);
     SELECT LAST_INSERT_ID() AS NewId;
@@ -481,8 +481,8 @@ CREATE PROCEDURE sp_BlockedDates_Add(
     IN p_RoomId INT,
     IN p_FromDate DATE,
     IN p_ToDate DATE,
-    IN p_Reason VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_RoomNumber VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci
+    IN p_Reason VARCHAR(200),
+    IN p_RoomNumber VARCHAR(50)
 )
 BEGIN
     INSERT INTO BlockedDates (RoomId, RoomNumber, FromDate, ToDate, Reason)
@@ -507,13 +507,13 @@ CREATE PROCEDURE sp_Bookings_Create(
     IN p_Adults INT,
     IN p_Children INT,
     IN p_Rooms INT,
-    IN p_GuestName VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_GuestPhone VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_GuestEmail VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_IdType VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_Notes TEXT COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_IdempotencyKey VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_RoomNumber VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci
+    IN p_GuestName VARCHAR(200),
+    IN p_GuestPhone VARCHAR(20),
+    IN p_GuestEmail VARCHAR(200),
+    IN p_IdType VARCHAR(50),
+    IN p_Notes TEXT,
+    IN p_IdempotencyKey VARCHAR(100),
+    IN p_RoomNumber VARCHAR(100)
 )
 proc: BEGIN
     DECLARE v_GuestId INT;
@@ -524,7 +524,7 @@ proc: BEGIN
     DECLARE v_Subtotal DECIMAL(10,2);
     DECLARE v_TaxAmount DECIMAL(10,2);
     DECLARE v_Total DECIMAL(10,2);
-    DECLARE v_Ref VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci;
+    DECLARE v_Ref VARCHAR(50);
     DECLARE v_BlockedCount INT DEFAULT 0;
     DECLARE v_ConflictCount INT DEFAULT 0;
 
@@ -659,7 +659,7 @@ proc: BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Bookings_GetByReference_Public$$
-CREATE PROCEDURE sp_Bookings_GetByReference_Public(IN p_Reference VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci, IN p_Token VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Bookings_GetByReference_Public(IN p_Reference VARCHAR(50), IN p_Token VARCHAR(100))
 BEGIN
     SELECT b.Id, b.Reference, b.Status, b.PaymentStatus, b.Source, b.RoomId, r.NameEn AS RoomName,
            b.RoomNumber, b.CheckIn, b.CheckOut, b.Nights, b.Adults, b.Children, b.RoomsCount,
@@ -685,7 +685,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Bookings_Lookup$$
-CREATE PROCEDURE sp_Bookings_Lookup(IN p_Reference VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci, IN p_Phone VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Bookings_Lookup(IN p_Reference VARCHAR(50), IN p_Phone VARCHAR(20))
 BEGIN
     SELECT b.Id, b.Reference, b.Status, b.PaymentStatus, b.Source, b.RoomId, r.NameEn AS RoomName,
            b.RoomNumber, b.CheckIn, b.CheckOut, b.Nights, b.Adults, b.Children, b.RoomsCount,
@@ -713,7 +713,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Bookings_Cancel_Public$$
-CREATE PROCEDURE sp_Bookings_Cancel_Public(IN p_Reference VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci, IN p_Reason VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Bookings_Cancel_Public(IN p_Reference VARCHAR(50), IN p_Reason VARCHAR(500))
 BEGIN
     DECLARE v_Id INT;
     SELECT Id INTO v_Id FROM Bookings WHERE Reference = p_Reference;
@@ -732,13 +732,13 @@ DROP PROCEDURE IF EXISTS sp_Bookings_GetAll_Admin$$
 CREATE PROCEDURE sp_Bookings_GetAll_Admin(
     IN p_Page INT,
     IN p_PageSize INT,
-    IN p_Status VARCHAR(30) DEFAULT NULL,
-    IN p_Search VARCHAR(100) DEFAULT NULL,
-    IN p_PaymentStatus VARCHAR(30) DEFAULT NULL,
-    IN p_CheckInFrom DATE DEFAULT NULL,
-    IN p_CheckInTo DATE DEFAULT NULL,
-    IN p_SortKey VARCHAR(30) DEFAULT NULL,
-    IN p_SortDir VARCHAR(4) DEFAULT NULL
+    IN p_Status VARCHAR(30),
+    IN p_Search VARCHAR(100),
+    IN p_PaymentStatus VARCHAR(30),
+    IN p_CheckInFrom DATE,
+    IN p_CheckInTo DATE,
+    IN p_SortKey VARCHAR(30),
+    IN p_SortDir VARCHAR(4)
 )
 BEGIN
     DECLARE v_Offset INT;
@@ -809,14 +809,14 @@ CREATE PROCEDURE sp_Bookings_Create_Admin(
     IN p_Adults INT,
     IN p_Children INT,
     IN p_Rooms INT,
-    IN p_GuestName VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_GuestPhone VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_GuestEmail VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_IdType VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_Notes TEXT COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_GuestName VARCHAR(200),
+    IN p_GuestPhone VARCHAR(20),
+    IN p_GuestEmail VARCHAR(200),
+    IN p_IdType VARCHAR(50),
+    IN p_Notes TEXT,
     IN p_StaffUserId INT,
-    IN p_StaffUsername VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_RoomNumber VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci
+    IN p_StaffUsername VARCHAR(100),
+    IN p_RoomNumber VARCHAR(100)
 )
 BEGIN
     DECLARE v_GuestId INT;
@@ -827,7 +827,7 @@ BEGIN
     DECLARE v_Subtotal DECIMAL(10,2);
     DECLARE v_TaxAmount DECIMAL(10,2);
     DECLARE v_Total DECIMAL(10,2);
-    DECLARE v_Ref VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci;
+    DECLARE v_Ref VARCHAR(50);
     DECLARE v_BlockedCount INT DEFAULT 0;
     DECLARE v_ConflictCount INT DEFAULT 0;
 
@@ -938,10 +938,10 @@ END$$
 DROP PROCEDURE IF EXISTS sp_Bookings_UpdateStatus$$
 CREATE PROCEDURE sp_Bookings_UpdateStatus(
     IN p_Id INT,
-    IN p_Status VARCHAR(30) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_Notes TEXT COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_RoomNumber VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ChangedBy VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci
+    IN p_Status VARCHAR(30),
+    IN p_Notes TEXT,
+    IN p_RoomNumber VARCHAR(50),
+    IN p_ChangedBy VARCHAR(100)
 )
 BEGIN
     DECLARE v_PaymentStatus VARCHAR(20);
@@ -967,7 +967,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Bookings_Cancel_Admin$$
-CREATE PROCEDURE sp_Bookings_Cancel_Admin(IN p_Id INT, IN p_Reason VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_ChangedBy VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Bookings_Cancel_Admin(IN p_Id INT, IN p_Reason VARCHAR(500), IN p_ChangedBy VARCHAR(100))
 BEGIN
     UPDATE Bookings 
     SET Status = 'cancelled', CancelledAt = NOW(), CancellationReason = p_Reason, UpdatedAt = NOW()
@@ -995,14 +995,14 @@ END$$
 -- ── PAYMENTS ────────────────────────────────────────────────────────────────
 
 DROP PROCEDURE IF EXISTS sp_Payments_CreateOrder$$
-CREATE PROCEDURE sp_Payments_CreateOrder(IN p_BookingId INT, IN p_RazorpayOrderId VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_Amount DECIMAL(10,2))
+CREATE PROCEDURE sp_Payments_CreateOrder(IN p_BookingId INT, IN p_RazorpayOrderId VARCHAR(100), IN p_Amount DECIMAL(10,2))
 BEGIN
     INSERT INTO Payments (BookingId, Method, Amount, Status, RazorpayOrderId)
     VALUES (p_BookingId, 'online', p_Amount, 'pending', p_RazorpayOrderId);
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Payments_Verify$$
-CREATE PROCEDURE sp_Payments_Verify(IN p_RazorpayOrderId VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_RazorpayPaymentId VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_BookingReference VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Payments_Verify(IN p_RazorpayOrderId VARCHAR(100), IN p_RazorpayPaymentId VARCHAR(100), IN p_BookingReference VARCHAR(50))
 BEGIN
     DECLARE v_PaymentId INT;
     DECLARE v_BookingId INT;
@@ -1026,7 +1026,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Payments_GetStatus$$
-CREATE PROCEDURE sp_Payments_GetStatus(IN p_BookingReference VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Payments_GetStatus(IN p_BookingReference VARCHAR(50))
 BEGIN
     SELECT b.PaymentStatus, b.AmountPaid, b.TotalAmount
     FROM Bookings b
@@ -1036,7 +1036,7 @@ END$$
 -- ── GUESTS ──────────────────────────────────────────────────────────────────
 
 DROP PROCEDURE IF EXISTS sp_Guests_GetAll_Admin$$
-CREATE PROCEDURE sp_Guests_GetAll_Admin(IN p_Page INT, IN p_PageSize INT, IN p_Search VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Guests_GetAll_Admin(IN p_Page INT, IN p_PageSize INT, IN p_Search VARCHAR(100))
 BEGIN
     DECLARE v_Offset INT;
     SET v_Offset = (p_Page - 1) * p_PageSize;
@@ -1078,8 +1078,8 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Tariffs_Create$$
 CREATE PROCEDURE sp_Tariffs_Create(
-    IN p_RoomId INT, IN p_PlanName VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_BaseRate DECIMAL(10,2),
-    IN p_StartDate DATE, IN p_EndDate DATE, IN p_Season VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_RoomId INT, IN p_PlanName VARCHAR(100), IN p_BaseRate DECIMAL(10,2),
+    IN p_StartDate DATE, IN p_EndDate DATE, IN p_Season VARCHAR(50),
     IN p_TaxPercent DECIMAL(5,2), IN p_IsActive TINYINT(1)
 )
 BEGIN
@@ -1099,8 +1099,8 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Tariffs_Update$$
 CREATE PROCEDURE sp_Tariffs_Update(
-    IN p_Id INT, IN p_RoomId INT, IN p_PlanName VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_BaseRate DECIMAL(10,2),
-    IN p_StartDate DATE, IN p_EndDate DATE, IN p_Season VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Id INT, IN p_RoomId INT, IN p_PlanName VARCHAR(100), IN p_BaseRate DECIMAL(10,2),
+    IN p_StartDate DATE, IN p_EndDate DATE, IN p_Season VARCHAR(50),
     IN p_TaxPercent DECIMAL(5,2), IN p_IsActive TINYINT(1)
 )
 BEGIN
@@ -1157,9 +1157,9 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Offers_Create$$
 CREATE PROCEDURE sp_Offers_Create(
-    IN p_TitleEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_TitleTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_DescEn TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_DescTa TEXT COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ImageUrl VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_StartDate DATE, IN p_EndDate DATE,
-    IN p_TermsEn TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_TermsTa TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_IsPublished TINYINT(1), IN p_SortOrder INT
+    IN p_TitleEn VARCHAR(300), IN p_TitleTa VARCHAR(300), IN p_DescEn TEXT, IN p_DescTa TEXT,
+    IN p_ImageUrl VARCHAR(500), IN p_StartDate DATE, IN p_EndDate DATE,
+    IN p_TermsEn TEXT, IN p_TermsTa TEXT, IN p_IsPublished TINYINT(1), IN p_SortOrder INT
 )
 BEGIN
     INSERT INTO Offers (TitleEn, TitleTa, DescEn, DescTa, ImageUrl, StartDate, EndDate, TermsEn, TermsTa, IsPublished, SortOrder)
@@ -1169,9 +1169,9 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Offers_Update$$
 CREATE PROCEDURE sp_Offers_Update(
-    IN p_Id INT, IN p_TitleEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_TitleTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_DescEn TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_DescTa TEXT COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ImageUrl VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_StartDate DATE, IN p_EndDate DATE,
-    IN p_TermsEn TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_TermsTa TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_IsPublished TINYINT(1), IN p_SortOrder INT
+    IN p_Id INT, IN p_TitleEn VARCHAR(300), IN p_TitleTa VARCHAR(300), IN p_DescEn TEXT, IN p_DescTa TEXT,
+    IN p_ImageUrl VARCHAR(500), IN p_StartDate DATE, IN p_EndDate DATE,
+    IN p_TermsEn TEXT, IN p_TermsTa TEXT, IN p_IsPublished TINYINT(1), IN p_SortOrder INT
 )
 BEGIN
     UPDATE Offers
@@ -1208,8 +1208,8 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Gallery_Create$$
 CREATE PROCEDURE sp_Gallery_Create(
-    IN p_Type VARCHAR(10) COLLATE utf8mb4_uca1400_ai_ci, IN p_Url VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_TitleEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_TitleTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_AltEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_AltTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_Category VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Type VARCHAR(10), IN p_Url VARCHAR(500), IN p_TitleEn VARCHAR(300), IN p_TitleTa VARCHAR(300),
+    IN p_AltEn VARCHAR(300), IN p_AltTa VARCHAR(300), IN p_Category VARCHAR(50),
     IN p_SortOrder INT, IN p_IsPublished TINYINT(1)
 )
 BEGIN
@@ -1220,8 +1220,8 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Gallery_Update$$
 CREATE PROCEDURE sp_Gallery_Update(
-    IN p_Id INT, IN p_Type VARCHAR(10) COLLATE utf8mb4_uca1400_ai_ci, IN p_Url VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_TitleEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_TitleTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_AltEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_AltTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_Category VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Id INT, IN p_Type VARCHAR(10), IN p_Url VARCHAR(500), IN p_TitleEn VARCHAR(300), IN p_TitleTa VARCHAR(300),
+    IN p_AltEn VARCHAR(300), IN p_AltTa VARCHAR(300), IN p_Category VARCHAR(50),
     IN p_SortOrder INT, IN p_IsPublished TINYINT(1)
 )
 BEGIN
@@ -1251,10 +1251,10 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Reviews_Submit$$
 CREATE PROCEDURE sp_Reviews_Submit(
-    IN p_Name VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Name VARCHAR(200),
     IN p_Rating TINYINT,
-    IN p_ReviewText TEXT COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_BookingReference VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci
+    IN p_ReviewText TEXT,
+    IN p_BookingReference VARCHAR(50)
 )
 BEGIN
     INSERT INTO Reviews (Name, Rating, BookingReference, ReviewText, Status)
@@ -1271,7 +1271,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Reviews_Moderate$$
-CREATE PROCEDURE sp_Reviews_Moderate(IN p_Id INT, IN p_Status VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci, IN p_ModeratedBy VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Reviews_Moderate(IN p_Id INT, IN p_Status VARCHAR(20), IN p_ModeratedBy VARCHAR(100))
 BEGIN
     UPDATE Reviews 
     SET Status = p_Status, ModeratedAt = NOW(), ModeratedBy = p_ModeratedBy 
@@ -1290,7 +1290,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Attractions_GetBySlug$$
-CREATE PROCEDURE sp_Attractions_GetBySlug(IN p_Slug VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Attractions_GetBySlug(IN p_Slug VARCHAR(100))
 BEGIN
     SELECT Id, Slug, NameEn, NameTa, DescEn, DescTa, Category, ImageUrl, MapsUrl, IsPublished, SortOrder
     FROM Attractions
@@ -1307,9 +1307,9 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Attractions_Create$$
 CREATE PROCEDURE sp_Attractions_Create(
-    IN p_Slug VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_NameEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_NameTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_DescEn TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_DescTa TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_Category VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ImageUrl VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_MapsUrl VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Slug VARCHAR(100), IN p_NameEn VARCHAR(300), IN p_NameTa VARCHAR(300),
+    IN p_DescEn TEXT, IN p_DescTa TEXT, IN p_Category VARCHAR(50),
+    IN p_ImageUrl VARCHAR(500), IN p_MapsUrl VARCHAR(500),
     IN p_IsPublished TINYINT(1), IN p_SortOrder INT
 )
 BEGIN
@@ -1330,9 +1330,9 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Attractions_Update$$
 CREATE PROCEDURE sp_Attractions_Update(
-    IN p_Id INT, IN p_Slug VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_NameEn VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_NameTa VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_DescEn TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_DescTa TEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_Category VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_ImageUrl VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_MapsUrl VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_Id INT, IN p_Slug VARCHAR(100), IN p_NameEn VARCHAR(300), IN p_NameTa VARCHAR(300),
+    IN p_DescEn TEXT, IN p_DescTa TEXT, IN p_Category VARCHAR(50),
+    IN p_ImageUrl VARCHAR(500), IN p_MapsUrl VARCHAR(500),
     IN p_IsPublished TINYINT(1), IN p_SortOrder INT
 )
 BEGIN
@@ -1363,8 +1363,8 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Enquiries_Submit$$
 CREATE PROCEDURE sp_Enquiries_Submit(
-    IN p_Name VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci, IN p_Phone VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci, IN p_Email VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_Subject VARCHAR(300) COLLATE utf8mb4_uca1400_ai_ci, IN p_Message TEXT COLLATE utf8mb4_uca1400_ai_ci
+    IN p_Name VARCHAR(200), IN p_Phone VARCHAR(20), IN p_Email VARCHAR(200),
+    IN p_Subject VARCHAR(300), IN p_Message TEXT
 )
 BEGIN
     INSERT INTO Enquiries (Name, Phone, Email, Subject, Message, Status)
@@ -1373,7 +1373,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Enquiries_GetAll_Admin$$
-CREATE PROCEDURE sp_Enquiries_GetAll_Admin(IN p_Page INT, IN p_PageSize INT, IN p_Status VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Enquiries_GetAll_Admin(IN p_Page INT, IN p_PageSize INT, IN p_Status VARCHAR(20))
 BEGIN
     DECLARE v_Offset INT;
     SET v_Offset = (p_Page - 1) * p_PageSize;
@@ -1394,7 +1394,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Enquiries_Update$$
-CREATE PROCEDURE sp_Enquiries_Update(IN p_Id INT, IN p_Status VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci, IN p_Notes TEXT COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Enquiries_Update(IN p_Id INT, IN p_Status VARCHAR(20), IN p_Notes TEXT)
 BEGIN
     UPDATE Enquiries 
     SET Status = IFNULL(p_Status, Status), Notes = IFNULL(p_Notes, Notes), UpdatedAt = NOW() 
@@ -1416,7 +1416,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Content_Update$$
-CREATE PROCEDURE sp_Content_Update(IN p_ContentKey VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_ValueJson LONGTEXT COLLATE utf8mb4_uca1400_ai_ci, IN p_UpdatedBy VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Content_Update(IN p_ContentKey VARCHAR(100), IN p_ValueJson LONGTEXT, IN p_UpdatedBy VARCHAR(100))
 BEGIN
     INSERT INTO SiteContent (ContentKey, ValueJson, IsDraft, UpdatedBy)
     VALUES (p_ContentKey, p_ValueJson, 1, p_UpdatedBy)
@@ -1424,7 +1424,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Content_Publish$$
-CREATE PROCEDURE sp_Content_Publish(IN p_UpdatedBy VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci)
+CREATE PROCEDURE sp_Content_Publish(IN p_UpdatedBy VARCHAR(100))
 BEGIN
     UPDATE SiteContent SET IsDraft = 0, UpdatedBy = p_UpdatedBy, UpdatedAt = NOW() WHERE ContentKey = 'main';
 END$$
@@ -1496,7 +1496,7 @@ END$$
 
 DROP PROCEDURE IF EXISTS sp_Staff_Create$$
 CREATE PROCEDURE sp_Staff_Create(
-    IN p_Username VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci, IN p_PasswordHash VARCHAR(500) COLLATE utf8mb4_uca1400_ai_ci, IN p_Name VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci, IN p_Role VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci
+    IN p_Username VARCHAR(100), IN p_PasswordHash VARCHAR(500), IN p_Name VARCHAR(200), IN p_Role VARCHAR(20)
 )
 BEGIN
     INSERT INTO Users (Username, PasswordHash, Name, Role, IsActive)
@@ -1505,7 +1505,7 @@ BEGIN
 END$$
 
 DROP PROCEDURE IF EXISTS sp_Staff_Update$$
-CREATE PROCEDURE sp_Staff_Update(IN p_Id INT, IN p_Name VARCHAR(200) COLLATE utf8mb4_uca1400_ai_ci, IN p_Role VARCHAR(20) COLLATE utf8mb4_uca1400_ai_ci, IN p_IsActive TINYINT(1))
+CREATE PROCEDURE sp_Staff_Update(IN p_Id INT, IN p_Name VARCHAR(200), IN p_Role VARCHAR(20), IN p_IsActive TINYINT(1))
 BEGIN
     UPDATE Users SET Name = p_Name, Role = p_Role, IsActive = p_IsActive, UpdatedAt = NOW() WHERE Id = p_Id;
 END$$
@@ -1562,8 +1562,8 @@ DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_Payments_SubmitUpi$$
 CREATE PROCEDURE sp_Payments_SubmitUpi(
-    IN p_BookingReference VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_Utr VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci,
+    IN p_BookingReference VARCHAR(50),
+    IN p_Utr VARCHAR(100),
     IN p_Amount DECIMAL(10,2)
 )
 BEGIN
@@ -1602,8 +1602,8 @@ CREATE PROCEDURE sp_Payments_VerifyUpi_Admin(
     IN p_BookingId INT,
     IN p_PaymentId INT,
     IN p_Approved TINYINT(1),
-    IN p_AdminUsername VARCHAR(100) COLLATE utf8mb4_uca1400_ai_ci,
-    IN p_Notes VARCHAR(255) COLLATE utf8mb4_uca1400_ai_ci
+    IN p_AdminUsername VARCHAR(100),
+    IN p_Notes VARCHAR(255)
 )
 BEGIN
     DECLARE v_Amount DECIMAL(10,2);

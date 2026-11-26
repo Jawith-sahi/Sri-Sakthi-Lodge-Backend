@@ -3,7 +3,7 @@
 -- Matches adatc-admin-webapp-backend SQL architecture & standard naming
 -- ============================================================================
 
-CREATE DATABASE IF NOT EXISTS sri_sakthi_lodge CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+CREATE DATABASE IF NOT EXISTS sri_sakthi_lodge CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE sri_sakthi_lodge;
 
 -- 1. USERS (Admin / Staff)
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS Users (
     IsActive      TINYINT(1)   NOT NULL DEFAULT 1,
     CreatedAt     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 2. REFRESH TOKENS (Rotating Token Store with Sliding & Absolute Expiry)
 CREATE TABLE IF NOT EXISTS RefreshTokens (
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS RefreshTokens (
     CONSTRAINT fk_refreshtokens_user FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE,
     INDEX idx_refreshtokens_tokenhash (TokenHash),
     INDEX idx_refreshtokens_userid (UserId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. ROOMS
 CREATE TABLE IF NOT EXISTS Rooms (
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS Rooms (
     SortOrder     INT          NOT NULL DEFAULT 0,
     CreatedAt     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3a. ROOM TYPES (Dynamic Room Types with Tamil translation & IsActive toggle)
 CREATE TABLE IF NOT EXISTS RoomTypes (
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS RoomTypes (
     SortOrder        INT          NOT NULL DEFAULT 0,
     CreatedAt        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3b. ROOM UNITS (Physical Room Numbers per Room Type)
 CREATE TABLE IF NOT EXISTS RoomUnits (
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS RoomUnits (
     CONSTRAINT fk_roomunits_room FOREIGN KEY (RoomId) REFERENCES Rooms(Id) ON DELETE CASCADE,
     INDEX idx_roomunits_roomid (RoomId),
     INDEX idx_roomunits_active (IsActive)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. ROOM IMAGES
 CREATE TABLE IF NOT EXISTS RoomImages (
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS RoomImages (
     SortOrder INT          NOT NULL DEFAULT 0,
     CONSTRAINT fk_roomimages_room FOREIGN KEY (RoomId) REFERENCES Rooms(Id) ON DELETE CASCADE,
     INDEX idx_roomimages_roomid (RoomId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. ROOM AMENITIES
 CREATE TABLE IF NOT EXISTS RoomAmenities (
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS RoomAmenities (
     LabelTa    VARCHAR(100) NOT NULL,
     CONSTRAINT fk_roomamenities_room FOREIGN KEY (RoomId) REFERENCES Rooms(Id) ON DELETE CASCADE,
     INDEX idx_roomamenities_roomid (RoomId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. ROOM NUMBERS
 CREATE TABLE IF NOT EXISTS RoomNumbers (
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS RoomNumbers (
     RoomId     INT         NOT NULL,
     RoomNumber VARCHAR(50) NOT NULL UNIQUE,
     CONSTRAINT fk_roomnumbers_room FOREIGN KEY (RoomId) REFERENCES Rooms(Id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. BLOCKED DATES
 CREATE TABLE IF NOT EXISTS BlockedDates (
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS BlockedDates (
     CreatedAt  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_blockeddates_room FOREIGN KEY (RoomId) REFERENCES Rooms(Id) ON DELETE CASCADE,
     INDEX idx_blockeddates_room_dates (RoomId, FromDate, ToDate)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. GUESTS
 CREATE TABLE IF NOT EXISTS Guests (
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS Guests (
     CreatedAt DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_guests_phone (Phone)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. BOOKINGS
 CREATE TABLE IF NOT EXISTS Bookings (
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS Bookings (
     CONSTRAINT fk_bookings_room FOREIGN KEY (RoomId) REFERENCES Rooms(Id),
     INDEX idx_bookings_dates (CheckIn, CheckOut),
     INDEX idx_bookings_status (Status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 10. BOOKING STATUS HISTORY
 CREATE TABLE IF NOT EXISTS BookingStatusHistory (
@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS BookingStatusHistory (
     ChangedAt DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ChangedBy VARCHAR(100) NOT NULL,
     CONSTRAINT fk_history_booking FOREIGN KEY (BookingId) REFERENCES Bookings(Id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 11. PAYMENTS
 CREATE TABLE IF NOT EXISTS Payments (
@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS Payments (
     CreatedAt         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_payments_booking FOREIGN KEY (BookingId) REFERENCES Bookings(Id) ON DELETE CASCADE,
     INDEX idx_payments_order (RazorpayOrderId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 12. TARIFFS
 CREATE TABLE IF NOT EXISTS Tariffs (
@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS Tariffs (
     IsActive   TINYINT(1)    NOT NULL DEFAULT 1,
     CreatedAt  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tariffs_room FOREIGN KEY (RoomId) REFERENCES Rooms(Id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 13. OFFERS
 CREATE TABLE IF NOT EXISTS Offers (
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS Offers (
     SortOrder       INT          NOT NULL DEFAULT 0,
     CreatedAt       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 14. GALLERY
 CREATE TABLE IF NOT EXISTS Gallery (
@@ -248,7 +248,7 @@ CREATE TABLE IF NOT EXISTS Gallery (
     SortOrder   INT          NOT NULL DEFAULT 0,
     IsPublished TINYINT(1)   NOT NULL DEFAULT 0,
     CreatedAt   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 15. REVIEWS
 CREATE TABLE IF NOT EXISTS Reviews (
@@ -261,7 +261,7 @@ CREATE TABLE IF NOT EXISTS Reviews (
     CreatedAt        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ModeratedAt      DATETIME     NULL,
     ModeratedBy      VARCHAR(100) NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 16. ATTRACTIONS
 CREATE TABLE IF NOT EXISTS Attractions (
@@ -278,7 +278,7 @@ CREATE TABLE IF NOT EXISTS Attractions (
     SortOrder   INT          NOT NULL DEFAULT 0,
     CreatedAt   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 17. ENQUIRIES
 CREATE TABLE IF NOT EXISTS Enquiries (
@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS Enquiries (
     Notes     TEXT         NULL,
     CreatedAt DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 18. SITE CONTENT
 CREATE TABLE IF NOT EXISTS SiteContent (
@@ -302,7 +302,7 @@ CREATE TABLE IF NOT EXISTS SiteContent (
     IsDraft     TINYINT(1)   NOT NULL DEFAULT 0,
     UpdatedAt   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UpdatedBy   VARCHAR(100) NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- SEED INITIAL ADMIN USER
 -- Password is 'admin' (hashed via ASP.NET Core Identity PasswordHasher<object>)
