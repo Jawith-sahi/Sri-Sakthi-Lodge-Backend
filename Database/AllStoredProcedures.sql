@@ -161,11 +161,10 @@ BEGIN
             WHEN (SELECT COUNT(*) FROM RoomUnits u WHERE u.RoomId = r.Id AND u.IsActive = 1) > 0 THEN
                 (SELECT COUNT(*) FROM RoomUnits u 
                  WHERE u.RoomId = r.Id AND u.IsActive = 1
-                   -- Not booked
                    AND NOT EXISTS (
                        SELECT 1 FROM Bookings b
                        WHERE b.RoomId = r.Id
-                         AND b.Status NOT IN ('cancelled', 'checked_out')
+                         AND LOWER(TRIM(b.Status)) NOT IN ('cancelled', 'checked_out', 'checkout', 'cancel', 'canceled')
                          AND NOT (b.CheckOut <= p_CheckIn OR b.CheckIn >= p_CheckOut)
                          AND (
                              b.RoomNumber = u.RoomNumber
@@ -175,16 +174,20 @@ BEGIN
                              OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber)
                          )
                    )
-                   -- Not blocked for this specific room number or category-wide
                    AND NOT EXISTS (
                        SELECT 1 FROM BlockedDates bd
                        WHERE bd.RoomId = r.Id
                          AND (bd.RoomNumber IS NULL OR bd.RoomNumber = '' OR bd.RoomNumber = u.RoomNumber)
-                         AND NOT (bd.ToDate <= p_CheckIn OR bd.FromDate >= p_CheckOut)
+                         AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn
                    )
                 )
             WHEN r.TotalUnits >= 999 THEN 999 
-            ELSE GREATEST(0, (r.TotalUnits - IFNULL(b.BookedCount, 0))) 
+            ELSE GREATEST(0, (r.TotalUnits - IFNULL(b.BookedCount, 0) - (
+                SELECT COUNT(*) FROM BlockedDates bd 
+                WHERE bd.RoomId = r.Id 
+                  AND (bd.RoomNumber IS NULL OR bd.RoomNumber = '')
+                  AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn
+            ))) 
         END) AS AvailableUnits,
         (SELECT GROUP_CONCAT(u.RoomNumber ORDER BY CAST(u.RoomNumber AS UNSIGNED), u.RoomNumber SEPARATOR ',') 
          FROM RoomUnits u 
@@ -192,11 +195,10 @@ BEGIN
         (SELECT GROUP_CONCAT(u.RoomNumber ORDER BY CAST(u.RoomNumber AS UNSIGNED), u.RoomNumber SEPARATOR ',') 
          FROM RoomUnits u 
          WHERE u.RoomId = r.Id AND u.IsActive = 1
-           -- Not booked
            AND NOT EXISTS (
                SELECT 1 FROM Bookings b
                WHERE b.RoomId = r.Id
-                 AND b.Status NOT IN ('cancelled', 'checked_out')
+                 AND LOWER(TRIM(b.Status)) NOT IN ('cancelled', 'checked_out', 'checkout', 'cancel', 'canceled')
                  AND NOT (b.CheckOut <= p_CheckIn OR b.CheckIn >= p_CheckOut)
                  AND (
                      b.RoomNumber = u.RoomNumber
@@ -206,57 +208,85 @@ BEGIN
                      OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber)
                  )
            )
-           -- Not blocked for this specific room number or category-wide
            AND NOT EXISTS (
                SELECT 1 FROM BlockedDates bd
                WHERE bd.RoomId = r.Id
                  AND (bd.RoomNumber IS NULL OR bd.RoomNumber = '' OR bd.RoomNumber = u.RoomNumber)
-                 AND NOT (bd.ToDate <= p_CheckIn OR bd.FromDate >= p_CheckOut)
+                 AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn
            )
-        ) AS AvailableRoomNumbers
+        ) AS AvailableRoomNumbers,
+        (SELECT GROUP_CONCAT(DISTINCT u.RoomNumber ORDER BY CAST(u.RoomNumber AS UNSIGNED), u.RoomNumber SEPARATOR ',') 
+         FROM RoomUnits u 
+         WHERE u.RoomId = r.Id AND u.IsActive = 1
+           AND EXISTS (
+               SELECT 1 FROM Bookings b
+               WHERE b.RoomId = r.Id
+                 AND LOWER(TRIM(b.Status)) NOT IN ('cancelled', 'checked_out', 'checkout', 'cancel', 'canceled')
+                 AND NOT (b.CheckOut <= p_CheckIn OR b.CheckIn >= p_CheckOut)
+                 AND (
+                     b.RoomNumber = u.RoomNumber
+                     OR FIND_IN_SET(u.RoomNumber, REPLACE(b.RoomNumber, ' ', '')) > 0
+                     OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber, ',%')
+                     OR b.RoomNumber LIKE CONCAT(u.RoomNumber, ',%')
+                     OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber)
+                 )
+           )
+        ) AS BookedRoomNumbers,
+        (SELECT GROUP_CONCAT(DISTINCT u.RoomNumber ORDER BY CAST(u.RoomNumber AS UNSIGNED), u.RoomNumber SEPARATOR ',') 
+         FROM RoomUnits u 
+         WHERE u.RoomId = r.Id AND u.IsActive = 1
+           AND EXISTS (
+               SELECT 1 FROM BlockedDates bd
+               WHERE bd.RoomId = r.Id
+                 AND (bd.RoomNumber IS NULL OR bd.RoomNumber = '' OR bd.RoomNumber = u.RoomNumber)
+                 AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn
+           )
+        ) AS BlockedRoomNumbers
     FROM Rooms r
     LEFT JOIN (
         SELECT RoomId, SUM(RoomsCount) AS BookedCount
         FROM Bookings
-        WHERE Status NOT IN ('cancelled', 'checked_out')
+        WHERE LOWER(TRIM(Status)) NOT IN ('cancelled', 'checked_out', 'checkout', 'cancel', 'canceled')
           AND NOT (CheckOut <= p_CheckIn OR CheckIn >= p_CheckOut)
         GROUP BY RoomId
     ) b ON r.Id = b.RoomId
     WHERE r.IsActive = 1
       AND r.IsDeleted = 0
-      -- Do not return if entire category is blocked
       AND NOT EXISTS (
           SELECT 1 FROM BlockedDates bd 
           WHERE bd.RoomId = r.Id 
             AND (bd.RoomNumber IS NULL OR bd.RoomNumber = '')
-            AND NOT (bd.ToDate <= p_CheckIn OR bd.FromDate >= p_CheckOut)
+            AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn
       )
       AND (
-          r.TotalUnits >= 999 
-          OR (r.TotalUnits - IFNULL(b.BookedCount, 0)) >= p_Rooms
-          OR (
-              SELECT COUNT(*) FROM RoomUnits u 
-              WHERE u.RoomId = r.Id AND u.IsActive = 1
-                AND NOT EXISTS (
-                    SELECT 1 FROM Bookings b
-                    WHERE b.RoomId = r.Id
-                      AND b.Status NOT IN ('cancelled', 'checked_out')
-                      AND NOT (b.CheckOut <= p_CheckIn OR b.CheckIn >= p_CheckOut)
-                      AND (
-                          b.RoomNumber = u.RoomNumber
-                          OR FIND_IN_SET(u.RoomNumber, REPLACE(b.RoomNumber, ' ', '')) > 0
-                          OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber, ',%')
-                          OR b.RoomNumber LIKE CONCAT(u.RoomNumber, ',%')
-                          OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber)
-                      )
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM BlockedDates bd
-                    WHERE bd.RoomId = r.Id
-                      AND (bd.RoomNumber IS NULL OR bd.RoomNumber = '' OR bd.RoomNumber = u.RoomNumber)
-                      AND NOT (bd.ToDate <= p_CheckIn OR bd.FromDate >= p_CheckOut)
-                )
-          ) >= p_Rooms
+          p_Rooms <= 0 OR
+          CASE 
+              WHEN (SELECT COUNT(*) FROM RoomUnits u WHERE u.RoomId = r.Id AND u.IsActive = 1) > 0 THEN
+                  (SELECT COUNT(*) FROM RoomUnits u 
+                   WHERE u.RoomId = r.Id AND u.IsActive = 1
+                     AND NOT EXISTS (
+                         SELECT 1 FROM Bookings b
+                         WHERE b.RoomId = r.Id
+                           AND LOWER(TRIM(b.Status)) NOT IN ('cancelled', 'checked_out', 'checkout', 'cancel', 'canceled')
+                           AND NOT (b.CheckOut <= p_CheckIn OR b.CheckIn >= p_CheckOut)
+                           AND (
+                               b.RoomNumber = u.RoomNumber
+                               OR FIND_IN_SET(u.RoomNumber, REPLACE(b.RoomNumber, ' ', '')) > 0
+                               OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber, ',%')
+                               OR b.RoomNumber LIKE CONCAT(u.RoomNumber, ',%')
+                               OR b.RoomNumber LIKE CONCAT('%,', u.RoomNumber)
+                           )
+                     )
+                     AND NOT EXISTS (
+                         SELECT 1 FROM BlockedDates bd
+                         WHERE bd.RoomId = r.Id
+                           AND (bd.RoomNumber IS NULL OR bd.RoomNumber = '' OR bd.RoomNumber = u.RoomNumber)
+                           AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn
+                     )
+                  ) >= p_Rooms
+              WHEN r.TotalUnits >= 999 THEN TRUE
+              ELSE (r.TotalUnits - IFNULL(b.BookedCount, 0)) >= p_Rooms
+          END
       )
     ORDER BY r.SortOrder ASC, r.Id ASC;
 END$$
@@ -495,6 +525,8 @@ proc: BEGIN
     DECLARE v_TaxAmount DECIMAL(10,2);
     DECLARE v_Total DECIMAL(10,2);
     DECLARE v_Ref VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci;
+    DECLARE v_BlockedCount INT DEFAULT 0;
+    DECLARE v_ConflictCount INT DEFAULT 0;
 
     -- Idempotency check: if request was already processed with this key, return the existing booking!
     IF p_IdempotencyKey IS NOT NULL AND TRIM(p_IdempotencyKey) != '' THEN
@@ -511,9 +543,59 @@ proc: BEGIN
             INNER JOIN Guests g ON g.Id = b.GuestId
             WHERE b.Id = v_BookingId;
 
-            SELECT Id, Method, Amount, Status, Reference, PaidAt FROM Payments WHERE BookingId = v_BookingId;
+            SELECT Id, Method, Amount, Status, Reference, COALESCE(PaidAt, CreatedAt) AS PaidAt FROM Payments WHERE BookingId = v_BookingId;
             SELECT Status, ChangedAt, ChangedBy FROM BookingStatusHistory WHERE BookingId = v_BookingId ORDER BY ChangedAt ASC;
             LEAVE proc;
+        END IF;
+    END IF;
+
+    -- Room Unit collision / block validation
+    IF p_RoomNumber IS NOT NULL AND TRIM(p_RoomNumber) != '' THEN
+        SELECT COUNT(*) INTO v_BlockedCount
+        FROM BlockedDates bd
+        WHERE bd.RoomId = p_RoomId
+          AND (
+              bd.RoomNumber IS NULL 
+              OR bd.RoomNumber = '' 
+              OR FIND_IN_SET(bd.RoomNumber, REPLACE(p_RoomNumber, ' ', '')) > 0
+          )
+          AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn;
+
+        IF v_BlockedCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'One or more selected room numbers are blocked for maintenance on these dates.';
+        END IF;
+
+        SELECT COUNT(*) INTO v_ConflictCount
+        FROM Bookings b
+        WHERE b.RoomId = p_RoomId
+          AND LOWER(TRIM(b.Status)) NOT IN ('cancelled', 'checked_out', 'checkout', 'cancel', 'canceled')
+          AND NOT (b.CheckOut <= p_CheckIn OR b.CheckIn >= p_CheckOut)
+          AND b.RoomNumber IS NOT NULL
+          AND EXISTS (
+              SELECT 1 FROM RoomUnits u
+              WHERE u.RoomId = p_RoomId
+                AND FIND_IN_SET(u.RoomNumber, REPLACE(p_RoomNumber, ' ', '')) > 0
+                AND (
+                    b.RoomNumber = u.RoomNumber
+                    OR FIND_IN_SET(u.RoomNumber, REPLACE(b.RoomNumber, ' ', '')) > 0
+                )
+          );
+
+        IF v_ConflictCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'One or more selected room numbers are already booked on these dates.';
+        END IF;
+    ELSE
+        SELECT COUNT(*) INTO v_BlockedCount
+        FROM BlockedDates
+        WHERE RoomId = p_RoomId
+          AND (RoomNumber IS NULL OR RoomNumber = '')
+          AND FromDate < p_CheckOut AND ToDate > p_CheckIn;
+
+        IF v_BlockedCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'This room category is blocked for maintenance on the selected dates.';
         END IF;
     END IF;
 
@@ -572,7 +654,7 @@ proc: BEGIN
     INNER JOIN Guests g ON g.Id = b.GuestId
     WHERE b.Id = v_BookingId;
 
-    SELECT Id, Method, Amount, Status, Reference, PaidAt FROM Payments WHERE BookingId = v_BookingId;
+    SELECT Id, Method, Amount, Status, Reference, COALESCE(PaidAt, CreatedAt) AS PaidAt FROM Payments WHERE BookingId = v_BookingId;
     SELECT Status, ChangedAt, ChangedBy FROM BookingStatusHistory WHERE BookingId = v_BookingId ORDER BY ChangedAt ASC;
 END$$
 
@@ -590,7 +672,7 @@ BEGIN
     INNER JOIN Guests g ON g.Id = b.GuestId
     WHERE b.Reference = p_Reference;
 
-    SELECT p.Id, p.Method, p.Amount, p.Status, p.Reference, p.PaidAt 
+    SELECT p.Id, p.Method, p.Amount, p.Status, p.Reference, COALESCE(p.PaidAt, p.CreatedAt) AS PaidAt 
     FROM Payments p
     INNER JOIN Bookings b ON b.Id = p.BookingId
     WHERE b.Reference = p_Reference;
@@ -616,7 +698,7 @@ BEGIN
     INNER JOIN Guests g ON g.Id = b.GuestId
     WHERE b.Reference = p_Reference AND g.Phone = p_Phone;
 
-    SELECT p.Id, p.Method, p.Amount, p.Status, p.Reference, p.PaidAt 
+    SELECT p.Id, p.Method, p.Amount, p.Status, p.Reference, COALESCE(p.PaidAt, p.CreatedAt) AS PaidAt 
     FROM Payments p
     INNER JOIN Bookings b ON b.Id = p.BookingId
     INNER JOIN Guests g ON g.Id = b.GuestId
@@ -715,7 +797,7 @@ BEGIN
     INNER JOIN Guests g ON g.Id = b.GuestId
     WHERE b.Id = p_Id;
 
-    SELECT Id, Method, Amount, Status, Reference, PaidAt FROM Payments WHERE BookingId = p_Id;
+    SELECT Id, Method, Amount, Status, Reference, COALESCE(PaidAt, CreatedAt) AS PaidAt FROM Payments WHERE BookingId = p_Id;
     SELECT Status, ChangedAt, ChangedBy FROM BookingStatusHistory WHERE BookingId = p_Id ORDER BY ChangedAt ASC;
 END$$
 
@@ -746,6 +828,58 @@ BEGIN
     DECLARE v_TaxAmount DECIMAL(10,2);
     DECLARE v_Total DECIMAL(10,2);
     DECLARE v_Ref VARCHAR(50) COLLATE utf8mb4_uca1400_ai_ci;
+    DECLARE v_BlockedCount INT DEFAULT 0;
+    DECLARE v_ConflictCount INT DEFAULT 0;
+
+    -- Room Unit collision / block validation
+    IF p_RoomNumber IS NOT NULL AND TRIM(p_RoomNumber) != '' THEN
+        SELECT COUNT(*) INTO v_BlockedCount
+        FROM BlockedDates bd
+        WHERE bd.RoomId = p_RoomId
+          AND (
+              bd.RoomNumber IS NULL 
+              OR bd.RoomNumber = '' 
+              OR FIND_IN_SET(bd.RoomNumber, REPLACE(p_RoomNumber, ' ', '')) > 0
+          )
+          AND bd.FromDate < p_CheckOut AND bd.ToDate > p_CheckIn;
+
+        IF v_BlockedCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'One or more selected room numbers are blocked for maintenance on these dates.';
+        END IF;
+
+        SELECT COUNT(*) INTO v_ConflictCount
+        FROM Bookings b
+        WHERE b.RoomId = p_RoomId
+          AND LOWER(TRIM(b.Status)) NOT IN ('cancelled', 'checked_out', 'checkout', 'cancel', 'canceled')
+          AND NOT (b.CheckOut <= p_CheckIn OR b.CheckIn >= p_CheckOut)
+          AND b.RoomNumber IS NOT NULL
+          AND EXISTS (
+              SELECT 1 FROM RoomUnits u
+              WHERE u.RoomId = p_RoomId
+                AND FIND_IN_SET(u.RoomNumber, REPLACE(p_RoomNumber, ' ', '')) > 0
+                AND (
+                    b.RoomNumber = u.RoomNumber
+                    OR FIND_IN_SET(u.RoomNumber, REPLACE(b.RoomNumber, ' ', '')) > 0
+                )
+          );
+
+        IF v_ConflictCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'One or more selected room numbers are already booked on these dates.';
+        END IF;
+    ELSE
+        SELECT COUNT(*) INTO v_BlockedCount
+        FROM BlockedDates
+        WHERE RoomId = p_RoomId
+          AND (RoomNumber IS NULL OR RoomNumber = '')
+          AND FromDate < p_CheckOut AND ToDate > p_CheckIn;
+
+        IF v_BlockedCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'This room category is blocked for maintenance on the selected dates.';
+        END IF;
+    END IF;
 
     SET v_Nights = DATEDIFF(p_CheckOut, p_CheckIn);
     IF v_Nights <= 0 THEN SET v_Nights = 1; END IF;
@@ -797,7 +931,7 @@ BEGIN
     INNER JOIN Guests g ON g.Id = b.GuestId
     WHERE b.Id = v_BookingId;
 
-    SELECT Id, Method, Amount, Status, Reference, PaidAt FROM Payments WHERE BookingId = v_BookingId;
+    SELECT Id, Method, Amount, Status, Reference, COALESCE(PaidAt, CreatedAt) AS PaidAt FROM Payments WHERE BookingId = v_BookingId;
     SELECT Status, ChangedAt, ChangedBy FROM BookingStatusHistory WHERE BookingId = v_BookingId ORDER BY ChangedAt ASC;
 END$$
 

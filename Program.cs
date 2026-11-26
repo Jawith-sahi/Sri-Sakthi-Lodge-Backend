@@ -11,6 +11,12 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 // 1. Serilog Setup
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -83,11 +89,20 @@ builder.Services.AddCors(options =>
 {
     var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000", "http://localhost:3001" };
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials()
-              .WithExposedHeaders("Content-Disposition"));
+        policy.SetIsOriginAllowed(origin =>
+        {
+            if (allowedOrigins.Contains(origin)) return true;
+            if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+            {
+                if (uri.Host.EndsWith(".vercel.app") || uri.Host == "localhost" || uri.Host.EndsWith("srisakthilodge.com"))
+                    return true;
+            }
+            return false;
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+        .WithExposedHeaders("Content-Disposition"));
 });
 
 // 6. Application Services & Password Hasher

@@ -318,7 +318,9 @@ INSERT IGNORE INTO Rooms (Id, Slug, NameEn, NameTa, ShortDescEn, ShortDescTa, De
 VALUES 
 (1, 'single-bed', 'Single Bed', 'ஒற்றை படுக்கை', 'Clean and compact room for solo travelers', 'தனிப்பயணியருக்கான சுத்தமான அறை', 'Comfortable single bed room with essential amenities.', 'அனைத்து அடிப்படை வசதிகளுடன் கூடிய அறை.', 0, 2, 900.00, 'INR', 5, 1, 1),
 (2, 'double-bed', 'Double Bed', 'இரட்டை படுக்கை', 'Spacious double bed room', 'விசாலமான இரட்டை படுக்கை அறை', 'Comfortable double bed room for couples or friends.', 'தம்பதிகள் அல்லது நண்பர்களுக்கான அறை.', 0, 3, 1300.00, 'INR', 15, 1, 2),
-(3, 'standard-ac', 'Standard A/C', 'ஸ்டாண்டர்டு ஏசி', 'Air-conditioned comfort', 'குளிர்சாதன வசதியுடன் கூடிய அறை', 'Well furnished AC room for a pleasant stay.', 'சௌகரியமான தங்குதலுக்கு ஏற்ற ஏசி அறை.', 1, 3, 1800.00, 'INR', 15, 1, 3);
+(3, 'standard-ac', 'Standard A/C', 'ஸ்டாண்டர்டு ஏசி', 'Air-conditioned comfort', 'குளிர்சாதன வசதியுடன் கூடிய அறை', 'Well furnished AC room for a pleasant stay.', 'சௌகரியமான தங்குதலுக்கு ஏற்ற ஏசி அறை.', 1, 3, 1800.00, 'INR', 15, 1, 3),
+(4, 'five-bed-room', 'Five Bed Room', 'ஐந்து படுக்கை அறை', 'Clean and compact room for Bunch of travelers', 'பயணிகளுக்கான சுத்தமான அறை', '', '', 0, 6, 2000.00, 'INR', 8, 1, 4),
+(6, 'three-bed-room', 'Three Bed Room', 'மூன்று படுக்கை அறை', 'Comfortable three bed room', 'மூன்று படுக்கை அறை', '', '', 0, 4, 1450.00, 'INR', 7, 1, 5);
 
 -- SEED ROOM AMENITIES
 INSERT IGNORE INTO RoomAmenities (Id, RoomId, AmenityKey, LabelEn, LabelTa)
@@ -329,11 +331,35 @@ VALUES
 (4, 3, 'ac', 'Air Conditioning', 'குளிர்சாதன வசதி');
 
 -- SEED DEFAULT TARIFFS
-INSERT IGNORE INTO Tariffs (Id, RoomId, PlanName, BaseRate, StartDate, EndDate, TaxPercent, IsActive)
+INSERT IGNORE INTO Tariffs (Id, RoomId, PlanName, BaseRate, StartDate, EndDate, Season, TaxPercent, IsActive)
 VALUES 
-(1, 1, 'Standard Daily Rate', 900.00, '2026-01-01', '2030-12-31', NULL, 1),
-(2, 2, 'Standard Daily Rate', 1300.00, '2026-01-01', '2030-12-31', NULL, 1),
-(3, 3, 'Standard Daily Rate', 1800.00, '2026-01-01', '2030-12-31', NULL, 1);
+(1, 1, 'Standard Daily Rate', 900.00, '2024-01-01', NULL, 'Regular', NULL, 1),
+(2, 2, 'Standard Daily Rate', 1300.00, '2024-01-01', NULL, 'Regular', NULL, 1),
+(3, 3, 'Standard Daily Rate', 1800.00, '2024-01-01', NULL, 'Regular', NULL, 1),
+(4, 4, 'Standard Rate', 2000.00, '2024-01-01', NULL, 'Regular', NULL, 1),
+(5, 6, 'Standard Rate', 1450.00, '2024-01-01', NULL, 'Regular', NULL, 1);
+
+-- SEED ROOM IMAGES
+INSERT IGNORE INTO RoomImages (Id, RoomId, Url, AltEn, AltTa, SortOrder)
+VALUES 
+(1, 1, '/uploads/ab5a7435-760d-4761-ba29-c2cdedfbdbfc_1 bed.jpeg', NULL, NULL, 0),
+(3, 2, '/uploads/6ae7c1bf-7d54-47f4-ae33-b35525730497_2 bed wit AC.PNG', NULL, NULL, 0),
+(8, 3, '/uploads/868fea5a-83e0-4619-afc0-1dda31642242_1 bed wit ac.PNG', NULL, NULL, 0),
+(9, 4, '/uploads/40ec0134-e5d6-450b-9fbd-b8ed2abb0256_5 bed.PNG', NULL, NULL, 0);
+
+-- SEED INITIAL ROOM UNITS (Physical room numbers)
+INSERT IGNORE INTO RoomUnits (RoomId, RoomNumber, Floor, IsActive) VALUES
+(1, '101', '1st Floor', 1), (1, '102', '1st Floor', 1), (1, '103', '1st Floor', 1), (1, '104', '1st Floor', 1), (1, '105', '1st Floor', 1),
+(2, '201', '2nd Floor', 1), (2, '202', '2nd Floor', 1), (2, '203', '2nd Floor', 1), (2, '204', '2nd Floor', 1), (2, '205', '2nd Floor', 1),
+(2, '206', '2nd Floor', 1), (2, '207', '2nd Floor', 1), (2, '208', '2nd Floor', 1), (2, '209', '2nd Floor', 1), (2, '210', '2nd Floor', 1),
+(2, '211', '2nd Floor', 1), (2, '212', '2nd Floor', 1), (2, '213', '2nd Floor', 1), (2, '214', '2nd Floor', 1), (2, '215', '2nd Floor', 1),
+(3, '301', '3rd Floor', 1), (3, '302', '3rd Floor', 1), (3, '303', '3rd Floor', 1), (3, '304', '3rd Floor', 1), (3, '305', '3rd Floor', 1),
+(3, '306', '3rd Floor', 1), (3, '307', '3rd Floor', 1), (3, '308', '3rd Floor', 1), (3, '309', '3rd Floor', 1), (3, '310', '3rd Floor', 1),
+(3, '311', '3rd Floor', 1), (3, '312', '3rd Floor', 1), (3, '313', '3rd Floor', 1), (3, '314', '3rd Floor', 1), (3, '315', '3rd Floor', 1),
+(4, '401', '4th Floor', 1), (4, '402', '4th Floor', 1), (4, '403', '4th Floor', 1), (4, '404', '4th Floor', 1), (4, '405', '4th Floor', 1),
+(4, '406', '4th Floor', 1), (4, '407', '4th Floor', 1), (4, '408', '4th Floor', 1),
+(6, '501', '5th Floor', 1), (6, '502', '5th Floor', 1), (6, '503', '5th Floor', 1), (6, '504', '5th Floor', 1), (6, '505', '5th Floor', 1),
+(6, '506', '5th Floor', 1), (6, '507', '5th Floor', 1);
 
 -- SEED INITIAL ROOM TYPES
 INSERT INTO RoomTypes (Id, NameEn, NameTa, IsAc, DefaultOccupancy, IsActive, SortOrder)
@@ -356,12 +382,12 @@ ON DUPLICATE KEY UPDATE
 INSERT INTO SiteContent (ContentKey, ValueJson, IsDraft, UpdatedAt, UpdatedBy)
 VALUES (
     'upi_settings',
-    '{"enabled":true,"upiId":"srisakthi@ybl","payeeName":"Sri Sakthi Lodge","qrCodeUrl":"","advancePercent":100,"instructions":"Scan with any UPI app (GPay / PhonePe / Paytm / BHIM) and pay the advance. Enter the UTR reference to confirm.","AllowPayAtHotel":true}',
+    '{"Enabled":true,"AllowPayAtHotel":false,"UpiId":"jawithtb786-1@oksbi","PayeeName":"Sri Sakthi Lodge","QrCodeUrl":"","AdvancePercent":60,"Instructions":"Scan with any UPI app (GPay / PhonePe / Paytm / BHIM) and pay the advance. Enter the UTR reference to confirm."}',
     0,
     NOW(),
     'system'
 )
-ON DUPLICATE KEY UPDATE UpdatedAt = NOW();
+ON DUPLICATE KEY UPDATE ValueJson = VALUES(ValueJson), UpdatedAt = NOW();
 
 -- OFFERS TRIGGERS (Auto-sync RoomId, DiscountPercent and OfferPrice)
 DELIMITER //
