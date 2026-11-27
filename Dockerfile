@@ -12,8 +12,7 @@ RUN dotnet publish "SriSakthiLodge_API.csproj" -c Release -o /app/publish /p:Use
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-
-RUN mkdir -p /app/Uploads
+COPY --from=build /src/Uploads /app/Uploads
 
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080

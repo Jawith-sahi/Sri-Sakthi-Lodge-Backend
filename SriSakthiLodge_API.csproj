@@ -21,5 +21,11 @@
 		<PackageReference Include="Razorpay" Version="2.0.3" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Content Include="Uploads\**">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
 </Project>
 

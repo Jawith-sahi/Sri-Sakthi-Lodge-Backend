@@ -184,6 +184,39 @@ app.UseStaticFiles(new StaticFileOptions
     }
 });
 
+// Smart fallback for uploads with mismatched GUID prefixes
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/uploads", out var remaining) && !string.IsNullOrEmpty(remaining.Value))
+    {
+        var rawName = Uri.UnescapeDataString(remaining.Value.TrimStart('/'));
+        var filePath = Path.Combine(uploadsPath, rawName);
+        if (!File.Exists(filePath))
+        {
+            var baseName = rawName.Contains('_') ? rawName.Substring(rawName.IndexOf('_') + 1) : rawName;
+            var match = Directory.GetFiles(uploadsPath, $"*{baseName}").FirstOrDefault();
+            if (match != null)
+            {
+                context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                context.Response.Headers.Append("Cache-Control", "public,max-age=2592000");
+                var ext = Path.GetExtension(match).ToLowerInvariant();
+                var contentType = ext switch
+                {
+                    ".png" => "image/png",
+                    ".jpg" or ".jpeg" => "image/jpeg",
+                    ".webp" => "image/webp",
+                    ".svg" => "image/svg+xml",
+                    _ => "application/octet-stream"
+                };
+                context.Response.ContentType = contentType;
+                await context.Response.SendFileAsync(match);
+                return;
+            }
+        }
+    }
+    await next();
+});
+
 app.UseIpRateLimiting();
 
 app.UseAuthentication();
