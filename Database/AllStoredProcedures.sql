@@ -351,7 +351,7 @@ BEGIN
     IF p_RoomNumbersJson IS NOT NULL AND JSON_VALID(p_RoomNumbersJson) AND JSON_LENGTH(p_RoomNumbersJson) > 0 THEN
         INSERT IGNORE INTO RoomUnits (RoomId, RoomNumber, Floor, IsActive)
         SELECT v_RoomId, 
-               CAST(jt.RoomNumber AS CHAR(50)),
+               CAST(jt.RoomNumber AS CHAR(50)) COLLATE utf8mb4_unicode_ci,
                CASE 
                    WHEN jt.RoomNumber LIKE '1%' THEN '1st Floor'
                    WHEN jt.RoomNumber LIKE '2%' THEN '2nd Floor'
@@ -406,14 +406,14 @@ BEGIN
         DELETE FROM RoomUnits 
         WHERE RoomId = p_Id 
           AND RoomNumber NOT IN (
-              SELECT CAST(jt.RoomNumber AS CHAR(50))
+              SELECT CAST(jt.RoomNumber AS CHAR(50)) COLLATE utf8mb4_unicode_ci
               FROM JSON_TABLE(p_RoomNumbersJson, '$[*]' COLUMNS (RoomNumber VARCHAR(50) CHARACTER SET utf8mb4 PATH '$')) AS jt
           );
 
         -- Insert newly added units
         INSERT IGNORE INTO RoomUnits (RoomId, RoomNumber, Floor, IsActive)
         SELECT p_Id, 
-               CAST(jt.RoomNumber AS CHAR(50)),
+               CAST(jt.RoomNumber AS CHAR(50)) COLLATE utf8mb4_unicode_ci,
                CASE 
                    WHEN jt.RoomNumber LIKE '1%' THEN '1st Floor'
                    WHEN jt.RoomNumber LIKE '2%' THEN '2nd Floor'
